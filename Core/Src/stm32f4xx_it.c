@@ -198,6 +198,50 @@ void SysTick_Handler(void)
 /* please refer to the startup file (startup_stm32f4xx.s).                    */
 /******************************************************************************/
 
+/**
+  * @brief This function handles EXTI line[15:10] interrupts.
+  */
+void EXTI15_10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+	uint8_t count=0;
+	GPIO_PinState PrevState=GPIO_PIN_SET;
+
+	while (count < 10)
+		{
+			if (PrevState != HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_13))
+			{
+				PrevState = HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_13);
+				count = 0;
+			}
+			else
+			{
+				count++;
+			}
+			HAL_Delay(5);
+		}
+
+	if(PrevState==GPIO_PIN_RESET)
+	{
+		if ((Menu & 0x0F) == 1)
+		{
+			Menu = ((uint8_t) __HAL_TIM_GET_COUNTER(&htim1)) << 4;
+			Menu &= 0xFE;
+			HAL_TIM_Encoder_Stop(&htim1, TIM_CHANNEL_1 | TIM_CHANNEL_2);
+		}
+		else
+		{
+			Menu |= 0x01;
+			HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_1 | TIM_CHANNEL_2);
+		}
+	}
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
+}
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */

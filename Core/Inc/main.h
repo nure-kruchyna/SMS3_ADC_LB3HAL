@@ -41,20 +41,22 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
+extern uint8_t Menu;
+extern TIM_HandleTypeDef htim1;
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-
+#define AREF 3.3
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-void Update_Scale(uint16_t);
-void Lcd_Print_Array(uint8_t*);
+void Draw_Graph(uint16_t);
+void Draw_Value_In_Volts(uint16_t);
+void Lcd_Print_Array(char*);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

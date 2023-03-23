@@ -39,13 +39,14 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN PV */
 Lcd_PortType LCDPT[]={GPIOD,GPIOD,GPIOD,GPIOD,GPIOD,GPIOD,GPIOD,GPIOD};
 Lcd_PinType LCDPINT[]  = {GPIO_PIN_0,GPIO_PIN_1,GPIO_PIN_2,GPIO_PIN_3,GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6,GPIO_PIN_7};
 Lcd_HandleTypeDef Display;
 
-uint8_t LCD_DATA[17]={};
+char LCD_DATA[17]={};
 
 uint8_t UC[6][8] = {
 		{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -56,11 +57,14 @@ uint8_t UC[6][8] = {
 		{ 0x1F,	0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F }
 };
 
+uint8_t Menu=0;
+uint16_t Measured=255;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -98,6 +102,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 	Display = Lcd_create(LCDPT, LCDPINT, GPIOB, GPIO_PIN_7, GPIOB, GPIO_PIN_5, LCD_8_BIT_MODE);
 
@@ -107,29 +112,48 @@ int main(void)
 	for (int i = 0; i < 6; i++)
 		Lcd_define_char(&Display, i, UC[i]);
 
-	float i=0;
-	//uint16_t i=256;
-
-	/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  sprintf(LCD_DATA,"VOLTAGE: %.4f",i);
-	  Lcd_Print_Array(LCD_DATA);
-	  i+=0.0001;
-	  if(i>=9.9)i=0;
-	  HAL_Delay(1);
+	  if((Menu&0x0F)==1)
+	  {
+		  switch(__HAL_TIM_GET_COUNTER(&htim1))
+		  {
+		  case 0:
+			  sprintf(LCD_DATA, "GRAPH           ");
+			  break;
+		  case 1:
+			  sprintf(LCD_DATA,"VALUE           ");
+			  break;
+		  default:
+			  sprintf(LCD_DATA,"ERROR           ");
+			  break;
+		  }
 
+	  }
+	  else
+	  {
+		  switch(Menu>>4)
+		  {
+		  case 0:
+			  Draw_Graph(Measured);
+			  break;
+		  case 1:
+			  Draw_Value_In_Volts(Measured);
+			  break;
+		  default:
+			  sprintf(LCD_DATA,"ERROR           ");
+			  break;
+		  }
+	  }
+
+		Lcd_Print_Array(LCD_DATA);
+		Measured++;
     /* USER CODE END WHILE */
-		/*Update_Scale(i);
-		HAL_Delay(100);
 
-		if (i < 4096)
-			i++;
-		else
-			i = 0;*/
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -177,6 +201,56 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_Encoder_InitTypeDef sConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 0;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 1;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
+  sConfig.IC1Polarity = TIM_ICPOLARITY_FALLING;
+  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC1Filter = 10;
+  sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC2Filter = 10;
+  if (HAL_TIM_Encoder_Init(&htim1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -186,6 +260,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
@@ -195,6 +270,12 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_7, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PE13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PD0 PD1 PD2 PD3
                            PD4 PD5 PD6 PD7 */
@@ -212,10 +293,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 7, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
-void Update_Scale(uint16_t Val)
+void Draw_Graph(uint16_t Val)
 {
 	uint8_t Int_Part;
 	uint8_t Frac_Part;
@@ -232,10 +317,17 @@ void Update_Scale(uint16_t Val)
 	{
 		LCD_DATA[i]=0;
 	}
-	Lcd_Print_Array(LCD_DATA);
+	//Lcd_Print_Array(LCD_DATA);
 }
 
-void Lcd_Print_Array(uint8_t* arr)
+void Draw_Value_In_Volts(uint16_t Val)
+{
+	float Volts;
+	Volts = ((float)Val*AREF)/0x0FFF;
+	sprintf(LCD_DATA,"VOLTAGE: %.4f",Volts);
+}
+
+void Lcd_Print_Array(char* arr)
 {
 	for (int i = 0; i < 8; i++)
 	{
@@ -248,6 +340,7 @@ void Lcd_Print_Array(uint8_t* arr)
 	}
 	Lcd_cursor(&Display, 0, 0);
 }
+
 /* USER CODE END 4 */
 
 /**
