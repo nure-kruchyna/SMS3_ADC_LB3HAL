@@ -47,7 +47,7 @@ extern TIM_HandleTypeDef htim1;
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
-#define AREF 3.3
+#define AREF 2.95
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
@@ -57,6 +57,7 @@ void Error_Handler(void);
 void Draw_Graph(uint16_t);
 void Draw_Value_In_Volts(uint16_t);
 void Lcd_Print_Array(char*);
+void Average(uint16_t);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
